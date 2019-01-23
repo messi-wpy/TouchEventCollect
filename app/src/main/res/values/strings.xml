@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">TouchDemo</string>
+    <string name="root_bt">quit</string>
+    <string name="getevent_bt">getevent</string>
+    <string name="command">command</string>
+    <string name="files_view">显示所有文件</string>
+    <string name="content">显示内容</string>
+</resources>

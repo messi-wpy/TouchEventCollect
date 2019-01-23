@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity">
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/root_bt"
+        android:layout_alignParentTop="true"
+        android:id="@+id/root_bt"
+        />
+
+    <Button
+        android:id="@+id/getevent_bt"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignEnd="@+id/root_bt"
+        android:layout_marginEnd="-160dp"
+        android:text="@string/getevent_bt" />
+    <EditText
+        android:layout_below="@+id/getevent_bt"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/command"
+        android:id="@+id/command_et"/>
+
+    <Button
+        android:id="@+id/files_bt"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/command_et"
+
+        android:text="@string/files_view" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/files_bt"
+        android:id="@+id/content_bt"
+        android:text="@string/content"
+        />
+    <TextView
+        android:layout_below="@+id/content_bt"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Hello World!"
+        android:id="@+id/textview"
+        android:scrollbars="vertical" />
+
+</RelativeLayout>
