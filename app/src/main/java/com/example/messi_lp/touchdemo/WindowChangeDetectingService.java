@@ -13,6 +13,7 @@ import android.view.accessibility.AccessibilityEvent;
 import android.widget.Toast;
 
 public class WindowChangeDetectingService extends AccessibilityService {
+    private String lastSend="";
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
         if (event.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
@@ -20,14 +21,16 @@ public class WindowChangeDetectingService extends AccessibilityService {
                     event.getPackageName().toString(),
                     event.getClassName().toString()
             );
-            ActivityInfo activityInfo = tryGetActivity(componentName);
-            if (activityInfo!=null){
-                    RxBus.getDefault().send(componentName.getPackageName());
+                    String nowSent=componentName.getPackageName();
+                    if (nowSent.equals(lastSend))
+                        return;
+                    RxBus.getDefault().send(nowSent);
+                    lastSend=nowSent;
                 //...
             }
             // Log.i("younchen", "appStarted:" + componentName.flattenToShortString());
         }
-    }
+
 
     private ActivityInfo tryGetActivity(ComponentName componentName) {
         try {

@@ -26,14 +26,21 @@
         android:layout_below="@+id/getevent_bt"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="@string/command"
+        android:hint="file name"
         android:id="@+id/command_et"/>
+
+    <EditText
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/command_et"
+        android:hint="user_id"
+        android:id="@+id/user_id"/>
 
     <Button
         android:id="@+id/files_bt"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/command_et"
+        android:layout_below="@+id/user_id"
 
         android:text="@string/files_view" />
 
@@ -44,8 +51,14 @@
         android:id="@+id/content_bt"
         android:text="@string/content"
         />
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/send_bt"
+        android:text="send"
+        android:layout_below="@id/content_bt"/>
     <TextView
-        android:layout_below="@+id/content_bt"
+        android:layout_below="@+id/send_bt"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Hello World!"

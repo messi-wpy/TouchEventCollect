@@ -3,6 +3,10 @@ package com.example.messi_lp.touchdemo;
 import java.sql.Time;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.IllegalFormatCodePointException;
+import java.util.concurrent.RecursiveTask;
+
+import io.reactivex.subjects.PublishSubject;
 
 /**
  * adb shell  getevent -l:
@@ -58,7 +62,10 @@ import java.util.Date;
  */
 public class CommonUtils {
 
-
+    public static final int ACTION_DOWN_NUM=-9999;
+    public static final int ACTION_UP_NUM=9999;
+    public static final String ACTION_DOWN="action_down";
+    public static final String ACTION_UP="action_up";
     /**
      *
      * @param str:一行命令结果
@@ -72,10 +79,19 @@ public class CommonUtils {
         boolean yFlag= false;
         String []strings=str.split("\\s+");
         for (String s:strings) {
-            if (s.equals("ABS_MT_POSITION_X"))
-                xFlag=true;
-            if (s.equals("ABS_MT_POSITION_Y"))
-                yFlag=true;
+            if (s.equals("ABS_MT_POSITION_X")) {
+                xFlag = true;
+                break;
+            }
+            if (s.equals("ABS_MT_POSITION_Y")) {
+                yFlag = true;
+                break;
+            }
+            if (s.equals("DOWN")){
+                return ACTION_DOWN_NUM;
+            }
+            if (s.equals("UP"))
+                return ACTION_UP_NUM;
         }
         if (xFlag){
             int x16=Integer.parseInt(strings[strings.length-1],16);
@@ -88,6 +104,7 @@ public class CommonUtils {
             return 0;
 
     }
+
     //返回距离的平方
     public static int distance2(int x1,int y1,int x2,int y2){
         return (int )(Math.pow(x1-x2,2)+Math.pow(y1-y2,2));

@@ -1,5 +1,11 @@
 package com.example.messi_lp.touchdemo;
 
+/**
+ * status:
+ *      -1--->down
+ *       0--->move
+ *       1--->up
+ */
 public class Coordinate {
     private int x;
     private int y;
