@@ -20,6 +20,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
@@ -51,6 +52,7 @@ import io.reactivex.functions.Action;
 import io.reactivex.functions.Consumer;
 import io.reactivex.functions.Function;
 import io.reactivex.schedulers.Schedulers;
+import okhttp3.Response;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -185,55 +187,69 @@ public class MainActivity extends AppCompatActivity {
 
         mSend_bt.setOnClickListener((view) -> {
             compositeDisposable.dispose();
-            Observable.create(new ObservableOnSubscribe<HashMap<String, List<NewData.ListBean>>>() {
+            try {
+                Observable.create(new ObservableOnSubscribe<HashMap<String, List<List<NewData.ListBean>>>>() {
 
 
-                @Override
-                public void subscribe(ObservableEmitter<HashMap<String, List<NewData.ListBean>>> emitter) throws Exception {
-                    FileConvert fileConvert = new FileConvert();
-                    String[] files = getApplicationContext().fileList();
-                    fileConvert.readFromFile(getApplicationContext().getFilesDir()+"/"+files[files.length - 1]);
-                    emitter.onNext(fileConvert.getHashMap());
-
-                }
-            }).subscribeOn(Schedulers.io())
-                    .flatMap(new Function<HashMap<String, List<NewData.ListBean>>, ObservableSource<NewData>>() {
-                        @Override
-                        public ObservableSource<NewData> apply(HashMap<String, List<NewData.ListBean>> stringListHashMap) throws Exception {
-                            if (stringListHashMap == null) return Observable.error(Throwable::new);
+                    @Override
+                    public void subscribe(ObservableEmitter<HashMap<String, List<List<NewData.ListBean>>>> emitter) throws Exception {
+                        FileConvert fileConvert = new FileConvert();
+                        String[] files = getApplicationContext().fileList();
+                        fileConvert.readFromFile(getApplicationContext().getFilesDir() + "/" + files[files.length - 1]);
+                        emitter.onNext(fileConvert.getHashMap());
+                    }
+                }).subscribeOn(Schedulers.io())
+                        .flatMap((Function<HashMap<String, List<List<NewData.ListBean>>>, ObservableSource<NewData>>) stringListHashMap -> {
+                            if (stringListHashMap == null)
+                                return Observable.error(Throwable::new);
                             List<NewData> list = new ArrayList<>();
-                            for (HashMap.Entry<String, List<NewData.ListBean>> entry : stringListHashMap.entrySet()) {
+                            for (HashMap.Entry<String, List<List<NewData.ListBean>>> entry : stringListHashMap.entrySet()) {
                                 NewData temp = new NewData();
                                 String name = TextUtils.isEmpty(mUserId_et.getText().toString()) ? "00000" : mUserId_et.getText().toString();
                                 temp.setUserID(Integer.parseInt(name));
                                 temp.setAppName(entry.getKey());
                                 temp.setList(entry.getValue());
                                 list.add(temp);
-                                Log.i(TAG, "apply: "+entry.getKey());
+                                Log.i(TAG, "apply: " + entry.getKey());
 
                             }
                             Log.i(TAG, "apply: flatMap 1");
                             return Observable.fromIterable(list);
-                        }
-                    }).flatMap(data -> {
-                            Log.i(TAG, "buttonInit: flatMap 2");
-                            return Observable.create(emitter -> {
-                                    String s = FileConvert.upLoad(data);
-                                    if (s==null)
-                                        emitter.onComplete();
-                                    else
-                                        emitter.onNext(s);
-                            });
+                        })
+                        .flatMap((Function<? super NewData, ? extends ObservableSource<Response>>) data -> {
+                                    Log.i(TAG, "buttonInit: flatMap 2");
+                                    Response httpresponse = FileConvert.upLoad(data);
+                                    if (httpresponse == null)
+                                         return Observable.empty();
+                                     return Observable.create(emitter -> {
+                                            emitter.onNext(httpresponse);
+                                         });
+                })
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe((Consumer<Response>) httpresponse -> {
+                                    if (httpresponse.code() != 200) {
+                                        Log.i(TAG, "httpresponse != 200");
+                                        mdata_tv.setText("wrong post");
+                                    }
+                                    String s = httpresponse.body().string();
+                                    String json = (String) s;
+                                    ReData response;
+                                    try {
+                                        Gson gson = new Gson();
+                                        response = gson.fromJson(json, ReData.class);
+                                        mdata_tv.setText("success");
+                                    } catch (JsonSyntaxException e) {
+                                        Log.i(TAG, "buttonInit:  illegal Expection");
+                                        e.printStackTrace();
+                                    }
 
-                        }).observeOn(AndroidSchedulers.mainThread())
-                            .subscribe(s -> {
-                                String json=(String) s;
-                                Gson gson=new Gson();
-                                ResultData response=gson.fromJson(json,ResultData.class);
-                                mdata_tv.setText(response.getOperationIDList().get(0).getID());
-                            }
-                    , Throwable::printStackTrace);
 
+                                }
+                                , Throwable::printStackTrace);
+            } catch (Exception e) {
+                Log.i(TAG, "buttonInit: onError");
+                e.printStackTrace();
+            }
 
         });
     }

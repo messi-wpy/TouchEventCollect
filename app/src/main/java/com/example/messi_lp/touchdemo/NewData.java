@@ -4,15 +4,16 @@ import java.util.List;
 
 public class NewData {
 
+
     /**
-     * userID : 0
-     * appName : string
-     * List : [{"dataList":[{"x":0,"y":0,"statu":0,"time":"string"}]}]
+     * userID : 1
+     * appName : qq
+     * List : [[{"x":1024,"y":1920,"statu":0,"time":3894573847},{"x":1024,"y":1920,"statu":0,"time":3894573847},{"x":1024,"y":1920,"statu":0,"time":3894573847},{"x":1024,"y":1920,"statu":0,"time":3894573847}],[{"x":1024,"y":1920,"statu":0,"time":3894573847},{"x":1024,"y":1920,"statu":0,"time":3894573847},{"x":1024,"y":1920,"statu":0,"time":3894573847},{"x":1024,"y":1920,"statu":0,"time":3894573847}]]
      */
 
     private int userID;
     private String appName;
-    private java.util.List<ListBean> List;
+    private java.util.List<java.util.List<ListBean>> List;
 
     public int getUserID() {
         return userID;
@@ -30,72 +31,57 @@ public class NewData {
         this.appName = appName;
     }
 
-    public List<ListBean> getList() {
+    public List<List<ListBean>> getList() {
         return List;
     }
 
-    public void setList(List<ListBean> List) {
+    public void setList(List<List<ListBean>> List) {
         this.List = List;
     }
 
     public static class ListBean {
-        private java.util.List<DataListBean> dataList;
-        public ListBean(List<DataListBean> list){
-            dataList=list;
+        /**
+         * x : 1024
+         * y : 1920
+         * statu : 0
+         * time : 3894573847
+         */
 
+        private int x;
+        private int y;
+        private int statu;
+        private long time;
+
+        public int getX() {
+            return x;
         }
-        public List<DataListBean> getDataList() {
-            return dataList;
+
+        public void setX(int x) {
+            this.x = x;
         }
 
-        public void setDataList(List<DataListBean> dataList) {
-            this.dataList = dataList;
+        public int getY() {
+            return y;
         }
 
-        public static class DataListBean {
-            /**
-             * x : 0
-             * y : 0
-             * statu : 0
-             * time : string
-             */
+        public void setY(int y) {
+            this.y = y;
+        }
 
-            private int x;
-            private int y;
-            private int statu;
-            private String time;
+        public int getStatu() {
+            return statu;
+        }
 
-            public int getX() {
-                return x;
-            }
+        public void setStatu(int statu) {
+            this.statu = statu;
+        }
 
-            public void setX(int x) {
-                this.x = x;
-            }
+        public long getTime() {
+            return time;
+        }
 
-            public int getY() {
-                return y;
-            }
-
-            public void setY(int y) {
-                this.y = y;
-            }
-
-            public int getStatu() {
-                return statu;
-            }
-
-            public void setStatu(int statu) {
-                this.statu = statu;
-            }
-
-            public String getTime() {
-                return time;
-            }
-
-            public void setTime(String time) {
-                this.time = time;
-            }
+        public void setTime(long time) {
+            this.time = time;
         }
     }
 }
