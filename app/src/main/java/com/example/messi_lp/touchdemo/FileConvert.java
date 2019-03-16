@@ -93,6 +93,7 @@ public class FileConvert {
                     ListBean data = new ListBean();
                     data.setX(Integer.parseInt(elem[2]));
                     data.setY(Integer.parseInt(elem[3]));
+                    // FIXME: 19-3-2  time
                     data.setTime(Integer.parseInt(elem[0]));
                     operate.add(data);
                     continue;

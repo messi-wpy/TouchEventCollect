@@ -190,7 +190,7 @@ public class MainActivity extends AppCompatActivity {
             try {
                 Observable.create(new ObservableOnSubscribe<HashMap<String, List<List<NewData.ListBean>>>>() {
 
-
+                    // FIXME: 19-3-2 send 重构
                     @Override
                     public void subscribe(ObservableEmitter<HashMap<String, List<List<NewData.ListBean>>>> emitter) throws Exception {
                         FileConvert fileConvert = new FileConvert();
