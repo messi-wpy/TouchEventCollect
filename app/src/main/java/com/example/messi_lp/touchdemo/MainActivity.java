@@ -17,7 +17,9 @@ import android.view.KeyEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
@@ -53,6 +55,7 @@ import io.reactivex.functions.Consumer;
 import io.reactivex.functions.Function;
 import io.reactivex.schedulers.Schedulers;
 import okhttp3.Response;
+import okio.Buffer;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -69,6 +72,7 @@ public class MainActivity extends AppCompatActivity {
     private Button mFileList_bt;
     private Button mContent_bt;
     private NotificationManager notificationManager;
+    private ProgressBar mProgressBar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -83,6 +87,7 @@ public class MainActivity extends AppCompatActivity {
         mFileList_bt = findViewById(R.id.files_bt);
         mUserId_et = findViewById(R.id.user_id);
         mSend_bt = findViewById(R.id.send_bt);
+        mProgressBar=findViewById(R.id.progress_bar);
         notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         buttonInit();
         Intent intent = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
@@ -193,9 +198,16 @@ public class MainActivity extends AppCompatActivity {
                     // FIXME: 19-3-2 send 重构
                     @Override
                     public void subscribe(ObservableEmitter<HashMap<String, List<List<NewData.ListBean>>>> emitter) throws Exception {
-                        FileConvert fileConvert = new FileConvert();
-                        String[] files = getApplicationContext().fileList();
-                        fileConvert.readFromFile(getApplicationContext().getFilesDir() + "/" + files[files.length - 1]);
+                        FileConvert fileConvert = new FileConvert(MainActivity.this);
+                        String filename;
+                        if (!TextUtils.isEmpty(mCommand_et.getText()))
+                            filename=mCommand_et.getText().toString();
+                        else {
+                            Toast.makeText(MainActivity.this,"请输入文件名",Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+
+                        fileConvert.readFromFile(getApplicationContext().getFilesDir() + "/" + filename);
                         emitter.onNext(fileConvert.getHashMap());
                     }
                 }).subscribeOn(Schedulers.io())
@@ -214,6 +226,7 @@ public class MainActivity extends AppCompatActivity {
 
                             }
                             Log.i(TAG, "apply: flatMap 1");
+
                             return Observable.fromIterable(list);
                         })
                         .flatMap((Function<? super NewData, ? extends ObservableSource<Response>>) data -> {
@@ -399,8 +412,7 @@ public class MainActivity extends AppCompatActivity {
                             wirter.write('\n');
                             return;
                         }
-                        time.setTime(System.currentTimeMillis());
-                        wirter.write(format.format(time).getBytes());
+                        wirter.write(String.valueOf(System.nanoTime()).getBytes());
                         wirter.write(s.getFormatP().getBytes());
                         wirter.write('\n');
                     }
