@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">TouchDemo</string>
+    <string name="app_name">触摸信息收集系统</string>
     <string name="root_bt">quit</string>
     <string name="getevent_bt">getevent</string>
     <string name="command">command</string>

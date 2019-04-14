@@ -2,14 +2,13 @@ package com.example.messi_lp.touchdemo;
 
 import android.app.NotificationManager;
 import android.app.PendingIntent;
-import android.app.TaskStackBuilder;
-import android.content.ComponentName;
 import android.content.Intent;
 import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.v4.app.NotificationCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.widget.Toolbar;
 import android.text.TextUtils;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
@@ -35,63 +34,61 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.IllegalFormatCodePointException;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 import io.reactivex.Observable;
 import io.reactivex.ObservableEmitter;
 import io.reactivex.ObservableOnSubscribe;
 import io.reactivex.ObservableSource;
-import io.reactivex.Observer;
-import io.reactivex.Scheduler;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.disposables.Disposable;
-import io.reactivex.disposables.Disposables;
-import io.reactivex.functions.Action;
 import io.reactivex.functions.Consumer;
 import io.reactivex.functions.Function;
 import io.reactivex.schedulers.Schedulers;
 import okhttp3.Response;
-import okio.Buffer;
 
 
 public class MainActivity extends AppCompatActivity {
 
     private static String TAG = "SHELL";
     private final String NOTIFICATION_ID = "keep_alive";
-    private Button mStart_bt;
-    private Button mQuit_bt;
     private TextView mdata_tv;
-    private EditText mCommand_et;
+    private EditText mSelect_ed;
     private EditText mUserId_et;
-    private Button mSend_bt;
     private CompositeDisposable compositeDisposable = new CompositeDisposable();
     private Button mFileList_bt;
-    private Button mContent_bt;
+    private Button mShow_files;
     private NotificationManager notificationManager;
     private ProgressBar mProgressBar;
 
+    private Toolbar toolbar;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        mdata_tv = findViewById(R.id.textview);
-        mQuit_bt = findViewById(R.id.root_bt);
-        mCommand_et = findViewById(R.id.command_et);
+        setContentView(R.layout.activity_main_v2);
+        mdata_tv = findViewById(R.id.content_text);
+
+
+        mSelect_ed = findViewById(R.id.select_text);
         mdata_tv.setMovementMethod(ScrollingMovementMethod.getInstance());
-        mStart_bt = findViewById(R.id.getevent_bt);
-        mContent_bt = findViewById(R.id.content_bt);
-        mFileList_bt = findViewById(R.id.files_bt);
-        mUserId_et = findViewById(R.id.user_id);
-        mSend_bt = findViewById(R.id.send_bt);
-        mProgressBar=findViewById(R.id.progress_bar);
+        mShow_files = findViewById(R.id.file_bt);
+
+
+        mUserId_et = findViewById(R.id.user_ed);
+        // TODO: 19-4-14  add progressbar
+        //mProgressBar=findViewById(R.id.progress_bar);
         notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         buttonInit();
         Intent intent = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
         startActivity(intent);
+
+        toolbar=findViewById(R.id.toobar);
+        toolbar.inflateMenu(R.menu.toobar_menu);
+        toolbar.setOnMenuItemClickListener(item -> {
+            //todo
+            return true;
+        });
 
 
     }
@@ -143,13 +140,13 @@ public class MainActivity extends AppCompatActivity {
 
 
         });
-        mContent_bt.setOnClickListener(v -> {
+        mShow_files.setOnClickListener(v -> {
             FileInputStream in = null;
 
             try {
                 String fileName;
-                if (!TextUtils.isEmpty(mCommand_et.getText().toString()))
-                    fileName = mCommand_et.getText().toString();
+                if (!TextUtils.isEmpty(mSelect_ed.getText().toString()))
+                    fileName = mSelect_ed.getText().toString();
                 else {
                     fileName = MainActivity.this.fileList()[1];
                 }
@@ -200,8 +197,8 @@ public class MainActivity extends AppCompatActivity {
                     public void subscribe(ObservableEmitter<HashMap<String, List<List<NewData.ListBean>>>> emitter) throws Exception {
                         FileConvert fileConvert = new FileConvert(MainActivity.this);
                         String filename;
-                        if (!TextUtils.isEmpty(mCommand_et.getText()))
-                            filename=mCommand_et.getText().toString();
+                        if (!TextUtils.isEmpty(mSelect_ed.getText()))
+                            filename= mSelect_ed.getText().toString();
                         else {
                             Toast.makeText(MainActivity.this,"请输入文件名",Toast.LENGTH_SHORT).show();
                             return;
@@ -284,7 +281,7 @@ public class MainActivity extends AppCompatActivity {
         Date time = new Date();
         SimpleDateFormat format = new SimpleDateFormat("yyyyMMdd-HHmmss");
         String command;
-        command = mCommand_et.getText().toString();
+        command = mSelect_ed.getText().toString();
         FileOutputStream wirter = MainActivity.this.openFileOutput(CommonUtils.timeName(), MODE_APPEND);
         Disposable d = RxBus.getDefault().toObservable(String.class)
                 .subscribe(s -> {
