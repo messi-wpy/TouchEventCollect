@@ -3,8 +3,11 @@ package com.example.messi_lp.touchdemo;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Intent;
+import android.net.Uri;
 import android.provider.Settings;
 import android.support.annotation.NonNull;
+import android.support.design.internal.BottomNavigationMenuView;
+import android.support.design.widget.BottomNavigationView;
 import android.support.v4.app.NotificationCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -13,6 +16,7 @@ import android.text.TextUtils;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -61,7 +65,7 @@ public class MainActivity extends AppCompatActivity {
     private Button mShow_files;
     private NotificationManager notificationManager;
     private ProgressBar mProgressBar;
-
+    private BottomNavigationView navigationView;
     private Toolbar toolbar;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -73,26 +77,184 @@ public class MainActivity extends AppCompatActivity {
         mSelect_ed = findViewById(R.id.select_text);
         mdata_tv.setMovementMethod(ScrollingMovementMethod.getInstance());
         mShow_files = findViewById(R.id.file_bt);
-
+        navigationView=findViewById(R.id.bottom_navigation);
 
         mUserId_et = findViewById(R.id.user_ed);
         // TODO: 19-4-14  add progressbar
         //mProgressBar=findViewById(R.id.progress_bar);
         notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-        buttonInit();
         Intent intent = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
         startActivity(intent);
 
         toolbar=findViewById(R.id.toobar);
         toolbar.inflateMenu(R.menu.toobar_menu);
         toolbar.setOnMenuItemClickListener(item -> {
-            //todo
+            Uri uri = Uri.parse("https://github.com/messi-wpy/TouchEventCollect/blob/master/readme.md");
+            Intent webintent = new Intent();
+            webintent.setAction("android.intent.action.VIEW");
+            webintent.setData(uri);
+            startActivity(webintent);
             return true;
         });
 
+        navigationView.setOnNavigationItemSelectedListener(this::BottomNavigationOnclick);
+        mShow_files.setOnClickListener(v -> onButtonClick());
 
     }
 
+
+
+    private void onButtonClick(){
+        if (TextUtils.isEmpty(mSelect_ed.getText().toString())){
+            String[] files = MainActivity.this.fileList();
+            mdata_tv.setText("");
+            for (String f : files) {
+                mdata_tv.append(f + '\n');
+
+            }
+        }else {
+            FileInputStream in = null;
+
+            try {
+                String fileName;
+                if (!TextUtils.isEmpty(mSelect_ed.getText().toString()))
+                    fileName = mSelect_ed.getText().toString();
+                else {
+                    fileName = MainActivity.this.fileList()[1];
+                }
+                in = MainActivity.this.openFileInput(fileName);
+                mdata_tv.setText("");
+                byte[] buffer = new byte[1024];
+                int line = 0;
+                while ((line = in.read(buffer)) > 0)
+                    mdata_tv.append(new String(buffer, 0, line));
+
+            } catch (FileNotFoundException e) {
+                mdata_tv.setText("文件未找到！可以尝试清空输入框点击展示文件获取所有文件名");
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                try {
+                    if (in != null)
+                        in.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+    }
+
+
+
+
+    private boolean isCollecting=false;
+
+    private boolean BottomNavigationOnclick(MenuItem menuItem){
+        switch (menuItem.getItemId()){
+
+            case R.id.start:{
+                if (isCollecting) {
+                    mdata_tv.setText("数据收集中请勿重复点击");
+                    break;
+                }
+                mdata_tv.setText("");
+                try {
+                    startGetevent();
+                    createNotification();
+                } catch (IOException e) {
+
+                    e.printStackTrace();
+                }
+                break;
+            }
+            case R.id.end:{
+                isCollecting=false;
+                quit();
+
+            }
+            case R.id.send_menu:{
+                compositeDisposable.dispose();
+                try {
+                    Observable.create(new ObservableOnSubscribe<HashMap<String, List<List<NewData.ListBean>>>>() {
+
+                        @Override
+                        public void subscribe(ObservableEmitter<HashMap<String, List<List<NewData.ListBean>>>> emitter) throws Exception {
+                            FileConvert fileConvert = new FileConvert(MainActivity.this);
+                            String filename;
+                            if (!TextUtils.isEmpty(mSelect_ed.getText()))
+                                filename= mSelect_ed.getText().toString();
+                            else {
+                                Toast.makeText(MainActivity.this,"请输入文件名",Toast.LENGTH_SHORT).show();
+                                return;
+                            }
+
+                            fileConvert.readFromFile(getApplicationContext().getFilesDir() + "/" + filename);
+                            emitter.onNext(fileConvert.getHashMap());
+                        }
+                    }).subscribeOn(Schedulers.io())
+                            .flatMap((Function<HashMap<String, List<List<NewData.ListBean>>>, ObservableSource<NewData>>) stringListHashMap -> {
+                                if (stringListHashMap == null)
+                                    return Observable.error(Throwable::new);
+                                List<NewData> list = new ArrayList<>();
+                                for (HashMap.Entry<String, List<List<NewData.ListBean>>> entry : stringListHashMap.entrySet()) {
+                                    NewData temp = new NewData();
+                                    String name = TextUtils.isEmpty(mUserId_et.getText().toString()) ? "00000" : mUserId_et.getText().toString();
+                                    temp.setUserID(Integer.parseInt(name));
+                                    temp.setAppName(entry.getKey());
+                                    temp.setList(entry.getValue());
+                                    list.add(temp);
+                                    Log.i(TAG, "apply: " + entry.getKey());
+
+                                }
+                                Log.i(TAG, "apply: flatMap 1");
+
+                                return Observable.fromIterable(list);
+                            })
+                            .flatMap((Function<? super NewData, ? extends ObservableSource<Response>>) data -> {
+                                Log.i(TAG, "buttonInit: flatMap 2");
+                                Response httpresponse = FileConvert.upLoad(data);
+                                if (httpresponse == null)
+                                    return Observable.empty();
+                                return Observable.create(emitter -> {
+                                    emitter.onNext(httpresponse);
+                                });
+                            })
+                            .observeOn(AndroidSchedulers.mainThread())
+                            .subscribe((Consumer<Response>) httpresponse -> {
+                                        if (httpresponse.code() != 200) {
+                                            Log.i(TAG, "httpresponse != 200");
+                                            mdata_tv.setText("wrong post");
+                                        }
+                                        String s = httpresponse.body().string();
+                                        String json = (String) s;
+                                        ReData response;
+                                        try {
+                                            Gson gson = new Gson();
+                                            response = gson.fromJson(json, ReData.class);
+                                            mdata_tv.setText("success");
+                                        } catch (JsonSyntaxException e) {
+                                            Log.i(TAG, "buttonInit:  illegal Expection");
+                                            e.printStackTrace();
+                                        }
+
+
+                                    }
+                                    , Throwable::printStackTrace);
+                } catch (Exception e) {
+                    Log.i(TAG, "buttonInit: onError");
+                    e.printStackTrace();
+                }
+
+            }
+
+
+        }
+        return true;
+
+
+    }
     @Override
     public void onDestroy() {
         compositeDisposable.dispose();
@@ -102,7 +264,6 @@ public class MainActivity extends AppCompatActivity {
 
     public void quit() {
         compositeDisposable.dispose();
-        mStart_bt.setEnabled(true);
         mdata_tv.setText("结束收集");
         notificationManager.cancel(0);
 
@@ -128,141 +289,6 @@ public class MainActivity extends AppCompatActivity {
         notificationManager.notify(0, builder.build());
     }
 
-    public void buttonInit() {
-        mQuit_bt.setOnClickListener(v -> quit());
-        mFileList_bt.setOnClickListener(v -> {
-            String[] files = MainActivity.this.fileList();
-            mdata_tv.setText("");
-            for (String f : files) {
-                mdata_tv.append(f + '\n');
-
-            }
-
-
-        });
-        mShow_files.setOnClickListener(v -> {
-            FileInputStream in = null;
-
-            try {
-                String fileName;
-                if (!TextUtils.isEmpty(mSelect_ed.getText().toString()))
-                    fileName = mSelect_ed.getText().toString();
-                else {
-                    fileName = MainActivity.this.fileList()[1];
-                }
-                in = MainActivity.this.openFileInput(fileName);
-                mdata_tv.setText("");
-                byte[] buffer = new byte[1024];
-                int line = 0;
-                while ((line = in.read(buffer)) > 0)
-                    mdata_tv.append(new String(buffer, 0, line));
-
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-            } finally {
-                try {
-                    if (in != null)
-                        in.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-
-        });
-        mStart_bt.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                mdata_tv.setText("");
-                try {
-                    startGetevent();
-                    createNotification();
-                } catch (IOException e) {
-
-                    e.printStackTrace();
-                }
-                mStart_bt.setEnabled(false);
-
-            }
-        });
-
-        mSend_bt.setOnClickListener((view) -> {
-            compositeDisposable.dispose();
-            try {
-                Observable.create(new ObservableOnSubscribe<HashMap<String, List<List<NewData.ListBean>>>>() {
-
-                    // FIXME: 19-3-2 send 重构
-                    @Override
-                    public void subscribe(ObservableEmitter<HashMap<String, List<List<NewData.ListBean>>>> emitter) throws Exception {
-                        FileConvert fileConvert = new FileConvert(MainActivity.this);
-                        String filename;
-                        if (!TextUtils.isEmpty(mSelect_ed.getText()))
-                            filename= mSelect_ed.getText().toString();
-                        else {
-                            Toast.makeText(MainActivity.this,"请输入文件名",Toast.LENGTH_SHORT).show();
-                            return;
-                        }
-
-                        fileConvert.readFromFile(getApplicationContext().getFilesDir() + "/" + filename);
-                        emitter.onNext(fileConvert.getHashMap());
-                    }
-                }).subscribeOn(Schedulers.io())
-                        .flatMap((Function<HashMap<String, List<List<NewData.ListBean>>>, ObservableSource<NewData>>) stringListHashMap -> {
-                            if (stringListHashMap == null)
-                                return Observable.error(Throwable::new);
-                            List<NewData> list = new ArrayList<>();
-                            for (HashMap.Entry<String, List<List<NewData.ListBean>>> entry : stringListHashMap.entrySet()) {
-                                NewData temp = new NewData();
-                                String name = TextUtils.isEmpty(mUserId_et.getText().toString()) ? "00000" : mUserId_et.getText().toString();
-                                temp.setUserID(Integer.parseInt(name));
-                                temp.setAppName(entry.getKey());
-                                temp.setList(entry.getValue());
-                                list.add(temp);
-                                Log.i(TAG, "apply: " + entry.getKey());
-
-                            }
-                            Log.i(TAG, "apply: flatMap 1");
-
-                            return Observable.fromIterable(list);
-                        })
-                        .flatMap((Function<? super NewData, ? extends ObservableSource<Response>>) data -> {
-                                    Log.i(TAG, "buttonInit: flatMap 2");
-                                    Response httpresponse = FileConvert.upLoad(data);
-                                    if (httpresponse == null)
-                                         return Observable.empty();
-                                     return Observable.create(emitter -> {
-                                            emitter.onNext(httpresponse);
-                                         });
-                })
-                        .observeOn(AndroidSchedulers.mainThread())
-                        .subscribe((Consumer<Response>) httpresponse -> {
-                                    if (httpresponse.code() != 200) {
-                                        Log.i(TAG, "httpresponse != 200");
-                                        mdata_tv.setText("wrong post");
-                                    }
-                                    String s = httpresponse.body().string();
-                                    String json = (String) s;
-                                    ReData response;
-                                    try {
-                                        Gson gson = new Gson();
-                                        response = gson.fromJson(json, ReData.class);
-                                        mdata_tv.setText("success");
-                                    } catch (JsonSyntaxException e) {
-                                        Log.i(TAG, "buttonInit:  illegal Expection");
-                                        e.printStackTrace();
-                                    }
-
-
-                                }
-                                , Throwable::printStackTrace);
-            } catch (Exception e) {
-                Log.i(TAG, "buttonInit: onError");
-                e.printStackTrace();
-            }
-
-        });
-    }
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent keyEvent) {
